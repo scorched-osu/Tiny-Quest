@@ -1,0 +1,10 @@
+{
+  "_comment": "PLACEHOLDER — overwritten by scripts/initialize.ts output. Addresses below are the system program (all-1s) so the frontend builds; replace before running against a real cluster.",
+  "jadeMint": "11111111111111111111111111111111",
+  "soulMint": "11111111111111111111111111111111",
+  "collections": {
+    "heroes": "11111111111111111111111111111111",
+    "gear": "11111111111111111111111111111111"
+  },
+  "feeAddress": "11111111111111111111111111111111"
+}

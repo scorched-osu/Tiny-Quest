@@ -1,0 +1,13 @@
+{
+  "address": "11111111111111111111111111111111",
+  "metadata": {
+    "name": "game_core",
+    "version": "0.1.0",
+    "spec": "0.1.0",
+    "description": "PLACEHOLDER IDL — overwritten by `anchor build` (target/idl/game_core.json). Copy real IDLs here before using the /onchain route."
+  },
+  "instructions": [],
+  "accounts": [],
+  "types": [],
+  "errors": []
+}

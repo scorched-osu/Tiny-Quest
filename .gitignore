@@ -16,6 +16,7 @@ test-ledger
 # Node / Next.js
 node_modules
 .next
+next-env.d.ts
 out
 dist
 build
@@ -24,9 +25,9 @@ yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
 
-# Generated IDLs / types are produced by `anchor build`
-frontend/lib/idl/*.json
-frontend/lib/deploy.json
+# Generated IDLs / types are produced by `anchor build` + scripts/initialize.ts.
+# Placeholder stubs are committed so the frontend builds on a fresh clone;
+# real output overwrites them locally (do not commit real deploy secrets).
 
 # Editor / OS
 .DS_Store
