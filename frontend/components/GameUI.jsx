@@ -97,6 +97,13 @@ const enemyForStage = (stage) => {
   const atk = Math.round(16 * Math.pow(1.11, stage - 1)) * (boss ? 2 : 1);
   return { name: boss ? `${m.name} ★` : m.name, icon: m.icon, hp: hpMax, hpMax, atk, boss };
 };
+// active skills (maps to the skills program's per-hero skill book); auto-cast on
+// cooldown during the battle loop. cd is in combat ticks (~650ms each).
+const SKILLS = [
+  { name: "Fireball", icon: "🔥", type: "dmg", mult: 1.2, cd: 4, color: "#ff8c1a" },
+  { name: "Mend", icon: "✨", type: "heal", amt: 0.22, cd: 9, color: "#34c759" },
+  { name: "Meteor", icon: "☄️", type: "dmg", mult: 3.0, cd: 14, color: "#ff3da5" },
+];
 
 export default function Game() {
   const [cur, setCur] = useState({ diamonds: 0, jade: 2_094_819, soul: 17_865_124 });
@@ -119,7 +126,7 @@ export default function Game() {
   const [listing, setListing] = useState(null);      // item being priced in the list modal
   const [pop, setPop] = useState(null); // floating combat text
   const idRef = useRef(1000);
-  const [combat, setCombat] = useState({ stage: 1, heroHp: null, enemy: enemyForStage(1), kills: 0, downed: false });
+  const [combat, setCombat] = useState({ stage: 1, heroHp: null, enemy: enemyForStage(1), kills: 0, downed: false, cds: SKILLS.map((s) => s.cd) });
   const tRef = useRef();
   const derivedRef = useRef(null);
 
@@ -152,15 +159,28 @@ export default function Game() {
       const d = derivedRef.current;
       if (!d) return;
       setCombat((cb) => {
-        let { stage, heroHp, enemy, kills } = cb;
+        let { stage, heroHp, enemy, kills, cds } = cb;
         const heroMax = d.hp;
         if (heroHp == null) heroHp = heroMax;
         if (!enemy) enemy = enemyForStage(stage);
-        // hero strikes
+        cds = cds && cds.length === SKILLS.length ? cds.map((c) => c - 1) : SKILLS.map((s) => s.cd);
+        // basic attack
         const crit = Math.random() * 10000 < d.crit;
         let dmg = Math.round(d.aMin + Math.random() * Math.max(1, d.aMax - d.aMin));
         if (crit) dmg = Math.round(dmg * 1.8);
-        setPop({ id: Math.random(), txt: crit ? `CRIT ${dmg}` : `${dmg}`, crit });
+        let popTxt = crit ? `CRIT ${dmg}` : `${dmg}`, popKind = crit ? "crit" : "hit";
+        // cast the first ready skill
+        let heal = 0;
+        const ready = cds.findIndex((c) => c <= 0);
+        if (ready >= 0) {
+          const sk = SKILLS[ready];
+          cds = cds.slice(); cds[ready] = sk.cd;
+          if (sk.type === "heal") { heal = Math.round(heroMax * sk.amt); popTxt = `${sk.icon} ${sk.name} +${heal}`; }
+          else { const sd = Math.round(d.aMax * sk.mult); dmg += sd; popTxt = `${sk.icon} ${sk.name} ${sd}`; }
+          popKind = "skill";
+        }
+        setPop({ id: Math.random(), txt: popTxt, crit: popKind === "crit", skill: popKind === "skill" });
+        heroHp = Math.min(heroMax, heroHp + heal);
         const eHp = enemy.hp - dmg;
         if (eHp <= 0) {
           const soulDrop = Math.round(enemy.hpMax * 0.015) + stage;
@@ -168,16 +188,16 @@ export default function Game() {
           const jadeDrop = enemy.boss ? stage * 3 : Math.random() < 0.25 ? stage : 0;
           setAcc((a) => ({ exp: a.exp + expDrop, soul: a.soul + soulDrop, jade: a.jade + jadeDrop }));
           const next = stage + 1;
-          return { stage: next, heroHp: Math.min(heroMax, heroHp + Math.round(heroMax * 0.25)), enemy: enemyForStage(next), kills: kills + 1, downed: false };
+          return { stage: next, heroHp: Math.min(heroMax, heroHp + Math.round(heroMax * 0.25)), enemy: enemyForStage(next), kills: kills + 1, downed: false, cds };
         }
         // enemy strikes back, mitigated by defence
         const eDmg = Math.max(1, Math.round(enemy.atk * (1 - d.def / (d.def + 240))));
         const hHp = heroHp - eDmg;
         if (hHp <= 0) {
           const back = Math.max(1, stage - 1);
-          return { stage: back, heroHp: heroMax, enemy: enemyForStage(back), kills, downed: true };
+          return { stage: back, heroHp: heroMax, enemy: enemyForStage(back), kills, downed: true, cds };
         }
-        return { ...cb, heroHp: hHp, enemy: { ...enemy, hp: eHp }, downed: false };
+        return { ...cb, heroHp: hHp, enemy: { ...enemy, hp: eHp }, downed: false, cds };
       });
     }, 650);
     return () => clearInterval(id);
@@ -328,9 +348,22 @@ export default function Game() {
               {/* enemy */}
               <div className="flex flex-col items-center" style={{ position: "relative", marginTop: 4 }}>
                 <div style={{ fontSize: 46, filter: "drop-shadow(0 3px 4px #0003)" }}>{combat.enemy?.icon}</div>
-                {pop && <span key={pop.id} style={{ ...px, position: "absolute", top: 0, color: pop.crit ? C.gold : "#fff", fontSize: pop.crit ? 17 : 13, fontWeight: 700, textShadow: "0 1px 3px #0007", animation: "rise .65s ease-out" }}>{pop.txt}</span>}
+                {pop && <span key={pop.id} style={{ ...px, position: "absolute", top: 0, color: pop.crit ? C.gold : pop.skill ? "#ffe08a" : "#fff", fontSize: pop.crit || pop.skill ? 16 : 13, fontWeight: 700, textShadow: "0 1px 3px #0008", animation: "rise .65s ease-out" }}>{pop.txt}</span>}
                 <div style={{ ...px, fontSize: 12, color: combat.enemy?.boss ? C.danger : C.ink, marginTop: 2 }}>{combat.enemy?.name}</div>
                 <div style={{ width: 190 }}><Bar frac={combat.enemy ? combat.enemy.hp / combat.enemy.hpMax : 1} color={C.danger} /></div>
+              </div>
+              {/* skill bar — auto-casts on cooldown */}
+              <div className="flex gap-2 justify-center mt-3">
+                {SKILLS.map((sk, i) => {
+                  const rem = combat.cds ? combat.cds[i] : sk.cd;
+                  const ready = rem <= 0;
+                  return (
+                    <div key={i} className="rounded-2xl flex items-center justify-center" style={{ width: 46, height: 46, position: "relative", overflow: "hidden", background: "#ffffffcc", border: ready ? `2px solid ${sk.color}` : "2px solid #ffffff00", boxShadow: ready ? `0 0 10px ${sk.color}aa` : "none" }}>
+                      <span style={{ fontSize: 22, filter: ready ? "none" : "grayscale(.5)", opacity: ready ? 1 : .55 }}>{sk.icon}</span>
+                      {!ready && <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, height: `${(rem / sk.cd) * 100}%`, background: "#3a355022" }} />}
+                    </div>
+                  );
+                })}
               </div>
               {/* hero HP */}
               <div className="rounded-2xl p-2 mt-3" style={{ background: "#ffffffcc", position: "relative" }}>
