@@ -21,7 +21,7 @@ use mpl_core::{
     ID as MPL_CORE_ID,
 };
 
-declare_id!("AsSeT1111111111111111111111111111111111111111"); // placeholder
+declare_id!("23AMrskYWpeEQny9mwLsBW1j2eV1iPqnB9GuMRk4sd1H"); // placeholder
 
 #[program]
 pub mod game_assets {

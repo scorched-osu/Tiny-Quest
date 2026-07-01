@@ -33,7 +33,7 @@ use game_assets::AttrArg;
 use game_resources::cpi as resources_cpi;
 use game_resources::cpi::accounts::BurnResource as ResourceBurn;
 
-declare_id!("PrGr1111111111111111111111111111111111111111"); // placeholder
+declare_id!("23AMrskYWpeEQny9mwLsBW1jSypoSHZDe5xyBXhsQjSw"); // placeholder
 
 const QUALITY_EPIC: u8 = 3;
 const MAX_STARS: u8 = 10;

@@ -15,7 +15,7 @@ use anchor_spl::token_interface::{
     self, Burn, Mint, MintTo, SetAuthority, TokenAccount, TokenInterface,
 };
 
-declare_id!("ReSo1111111111111111111111111111111111111111"); // placeholder
+declare_id!("23AMrskYWpeEQny9mwLsBW1jW9HCa9hwS9zwcZN6DoD1"); // placeholder
 
 #[program]
 pub mod game_resources {

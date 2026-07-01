@@ -15,7 +15,7 @@ use anchor_spl::token_interface::{
     self, Burn, Mint, MintTo, SetAuthority, TokenAccount, TokenInterface,
 };
 
-declare_id!("CoRe1111111111111111111111111111111111111111"); // placeholder — replace after `anchor keys list`
+declare_id!("23AMrskYWpeEQny9mwLsBW1j5sEu2FuJwDBQU9MeM463"); // placeholder — replace after `anchor keys list`
 
 const MAX_BPS: u16 = 10_000;
 

@@ -9,7 +9,7 @@
 use anchor_lang::prelude::*;
 use anchor_spl::token_interface::{self, Mint, TokenAccount, TokenInterface, TransferChecked};
 
-declare_id!("GuiL1111111111111111111111111111111111111111"); // placeholder
+declare_id!("23AMrskYWpeEQny9mwLsBW1jCPtc4y7hkb4wVTqrkDEP"); // placeholder
 
 pub const ROLE_MEMBER: u8 = 0;
 pub const ROLE_OFFICER: u8 = 1;

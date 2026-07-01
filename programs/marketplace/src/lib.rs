@@ -28,7 +28,7 @@ use mpl_core::{instructions::TransferV1CpiBuilder, ID as MPL_CORE_ID};
 use game_core::cpi as core_cpi;
 use game_core::cpi::accounts::BurnSink as CoreBurnSink;
 
-declare_id!("MrKt1111111111111111111111111111111111111111"); // placeholder
+declare_id!("23AMrskYWpeEQny9mwLsBW1jN1EgCrw3nLGMm3mm92Dd"); // placeholder
 
 const MAX_BPS: u16 = 10_000;
 

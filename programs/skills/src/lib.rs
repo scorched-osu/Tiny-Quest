@@ -14,7 +14,7 @@
 use anchor_lang::prelude::*;
 use mpl_core::{accounts::BaseAssetV1, fetch_plugin, types::{Attributes, PluginType}};
 
-declare_id!("SkiL1111111111111111111111111111111111111111"); // placeholder
+declare_id!("23AMrskYWpeEQny9mwLsBW1jXoaw3bUMQndndAkrNBAP"); // placeholder
 
 const POINTS_PER_LEVEL: u32 = 1;
 const LEARN_COST: u32 = 1;

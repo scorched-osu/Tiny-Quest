@@ -10,7 +10,7 @@
 
 use anchor_lang::prelude::*;
 
-declare_id!("AreN1111111111111111111111111111111111111111"); // placeholder
+declare_id!("23AMrskYWpeEQny9mwLsBW1j2e6XXdjY15tRaMXv5dHZ"); // placeholder
 
 #[program]
 pub mod game_arena {

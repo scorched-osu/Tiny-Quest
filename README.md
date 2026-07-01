@@ -48,10 +48,32 @@ Anchor.toml · Cargo.toml · DATA_MODEL.md
 - Node 18+
 - A Helius API key (DAS indexing) and an RPC endpoint
 
+## Build status & toolchain notes
+Verified on host (`cargo check`) with rustc 1.94:
+- **5 programs compile cleanly** — `core`, `resources`, `arena`, `guilds`, `titles`.
+- **4 programs use `mpl-core`** — `assets`, `progression`, `marketplace`, `skills`.
+  Their own source is sound, but they only build under the real `anchor build`
+  SBF toolchain, **not** a host `cargo check`. Reason: `mpl-core` and Anchor 0.31
+  must agree on a single Solana crate major. `mpl-core 0.8` references solana-1.x
+  APIs removed in solana ≥2.2 (`PrintProgramError`); `mpl-core 0.12` pulls the
+  solana-3.x/4.0 split-crates that clash with Anchor 0.31's solana-2.x. **Pin
+  `mpl-core` to the version whose Solana major matches your installed Anchor/Agave
+  toolchain** before `anchor build` (0.8.0 targets the API this code is written
+  against — `Pubkey` creators, `CreateCollectionV2CpiBuilder`, etc.).
+- Program IDs in `declare_id!`/`Anchor.toml` are valid 32-byte placeholders;
+  replace with `anchor keys list` output before deploying.
+
+## Try the game now (no chain needed)
+```bash
+cd frontend && npm i && npm run dev   # http://localhost:3000  → playable demo
+```
+The root route renders the simulated game (enhance / awaken / level / allocate /
+trade against local state). The wallet + on-chain wiring lives at `/onchain`.
+
 ## 1. Build & deploy programs
 ```bash
 anchor build
-anchor keys list          # copy the 5 generated program IDs
+anchor keys list          # copy the 9 generated program IDs
 # replace each declare_id!() AND the ids in Anchor.toml, then:
 anchor build
 anchor deploy --provider.cluster devnet

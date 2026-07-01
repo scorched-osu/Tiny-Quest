@@ -6,15 +6,15 @@ resolution = true
 skip-lint = false
 
 [programs.devnet]
-game_core = "CoRe1111111111111111111111111111111111111111"
-game_resources = "ReSo1111111111111111111111111111111111111111"
-game_assets = "AsSeT1111111111111111111111111111111111111111"
-game_progression = "PrGr1111111111111111111111111111111111111111"
-game_marketplace = "MrKt1111111111111111111111111111111111111111"
-game_skills = "SkiL1111111111111111111111111111111111111111"
-game_arena = "AreN1111111111111111111111111111111111111111"
-game_guilds = "GuiL1111111111111111111111111111111111111111"
-game_titles = "TitL1111111111111111111111111111111111111111"
+game_core = "23AMrskYWpeEQny9mwLsBW1j5sEu2FuJwDBQU9MeM463"
+game_resources = "23AMrskYWpeEQny9mwLsBW1jW9HCa9hwS9zwcZN6DoD1"
+game_assets = "23AMrskYWpeEQny9mwLsBW1j2eV1iPqnB9GuMRk4sd1H"
+game_progression = "23AMrskYWpeEQny9mwLsBW1jSypoSHZDe5xyBXhsQjSw"
+game_marketplace = "23AMrskYWpeEQny9mwLsBW1jN1EgCrw3nLGMm3mm92Dd"
+game_skills = "23AMrskYWpeEQny9mwLsBW1jXoaw3bUMQndndAkrNBAP"
+game_arena = "23AMrskYWpeEQny9mwLsBW1j2e6XXdjY15tRaMXv5dHZ"
+game_guilds = "23AMrskYWpeEQny9mwLsBW1jCPtc4y7hkb4wVTqrkDEP"
+game_titles = "23AMrskYWpeEQny9mwLsBW1jZQyqFyy8oLu6uY5cc76X"
 
 [registry]
 url = "https://api.apr.dev"

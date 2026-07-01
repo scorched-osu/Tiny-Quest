@@ -8,7 +8,7 @@
 
 use anchor_lang::prelude::*;
 
-declare_id!("TitL1111111111111111111111111111111111111111"); // placeholder
+declare_id!("23AMrskYWpeEQny9mwLsBW1jZQyqFyy8oLu6uY5cc76X"); // placeholder
 
 const MAX_TITLES: usize = 128;
 
