@@ -40,6 +40,10 @@ const SEED_ITEMS = [
   { id: 6, name: "Iron Gauntlets", slot: "gloves", q: 1, plus: 3, stars: 1, lvl: 18, icon: "🧤", base: { defence: 3, strength: 2, vitality: 3, max_attack: 18 } },
   { id: 7, name: "Verdant Crown", slot: "helm", q: 4, plus: 4, stars: 1, lvl: 48, icon: "👑", base: { defence: 9, intelligence: 6, hp: 40 } },
   { id: 8, name: "Soul Ring", slot: "ring", q: 5, plus: 1, stars: 3, lvl: 52, icon: "💍", base: { crit_bps: 250, intelligence: 5 } },
+  // alternatives / empty-slot fillers — equipping these is a real choice
+  { id: 9, name: "Ember Staff", slot: "weapon", q: 4, plus: 2, stars: 1, lvl: 52, icon: "🔮", base: { atk_min: 80, atk_max: 150, intelligence: 20, crit_bps: 150 } },
+  { id: 10, name: "Titan Greaves", slot: "legs", q: 2, plus: 3, stars: 1, lvl: 46, icon: "🥾", base: { defence: 14, hp: 50, vitality: 6 } },
+  { id: 11, name: "Sprite Pet", slot: "pet", q: 3, plus: 0, stars: 2, lvl: 40, icon: "🧚", base: { max_attack: 25, crit_bps: 120 } },
 ];
 
 // ── rules (mirror progression program) ──
@@ -80,6 +84,13 @@ export default function Game() {
   const [cur, setCur] = useState({ diamonds: 0, jade: 2_094_819, soul: 17_865_124 });
   const [hero, setHero] = useState({ class: 1, level: 55, exp: 0, soulPower: 59, strength: 60, agility: 24, intelligence: 88, vitality: 41, unspent: 6 });
   const [items, setItems] = useState(SEED_ITEMS);
+  // equipped loadout: slot -> item id (one item per slot). Only equipped gear
+  // feeds combat stats, so choosing a loadout matters.
+  const [equipped, setEquipped] = useState(() => {
+    const m = {};
+    for (const it of SEED_ITEMS) if (!(it.slot in m)) m[it.slot] = it.id;
+    return m;
+  });
   const [sel, setSel] = useState(null);
   const [tab, setTab] = useState("bag");
   const [acc, setAcc] = useState({ exp: 0, soul: 0, jade: 0 });
@@ -92,16 +103,22 @@ export default function Game() {
 
   const flash = (txt, color = C.ink) => { setToast({ txt, color }); clearTimeout(tRef.current); tRef.current = setTimeout(() => setToast(null), 1800); };
 
-  // derived combat panel from equipped loadout
+  const isEquipped = (it) => equipped[it.slot] === it.id;
+  const toggleEquip = (it) => setEquipped((e) => {
+    if (e[it.slot] === it.id) { const n = { ...e }; delete n[it.slot]; return n; } // unequip
+    return { ...e, [it.slot]: it.id }; // equip (replaces whatever was in the slot)
+  });
+
+  // derived combat panel from the EQUIPPED loadout only
   const derived = (() => {
     let aMin = hero.strength * 2, aMax = hero.strength * 4, def = Math.round(hero.vitality * 0.4), crit = 500;
     let hp = hero.vitality * 20 + hero.level * 12, mp = hero.intelligence * 15 + hero.level * 8;
-    for (const it of items) for (const [k, b] of Object.entries(it.base)) {
+    for (const it of items) { if (!isEquipped(it)) continue; for (const [k, b] of Object.entries(it.base)) {
       const v = b + bonusOf(b, it.plus, it.stars);
       if (k === "atk_min") aMin += v; else if (k === "atk_max") aMax += v;
       else if (k === "defence") def += v; else if (k === "hp") hp += v; else if (k === "mp") mp += v;
       else if (k === "crit_bps") crit += v; else if (k === "max_attack") aMax += v;
-    }
+    } }
     return { aMin, aMax, def, crit, hp, mp };
   })();
   derivedRef.current = derived; // latest combat stats for the battle loop
@@ -251,9 +268,12 @@ export default function Game() {
         {/* content */}
         <div className="px-3 mt-3">
           {tab === "bag" && (
-            <div className="grid grid-cols-4 gap-2">
-              {items.map((it) => <Tile key={it.id} it={it} onClick={() => setSel(it)} />)}
-            </div>
+            <>
+              <div style={{ fontSize: 11, color: C.sub, margin: "0 2px 6px" }}>Tap an item to inspect · <span style={{ color: C.jade }}>green dot</span> = equipped. Only equipped gear counts in combat.</div>
+              <div className="grid grid-cols-4 gap-2">
+                {items.map((it) => <Tile key={it.id} it={it} eq={isEquipped(it)} onClick={() => setSel(it)} />)}
+              </div>
+            </>
           )}
           {tab === "battle" && (
             <div className="rounded-3xl p-4" style={{ background: `linear-gradient(165deg, #bfe0ff, #8ec5ff)`, position: "relative", overflow: "hidden", minHeight: 220 }}>
@@ -325,7 +345,7 @@ export default function Game() {
         </div>
       )}
 
-      {sel && <Inspect it={sel} onClose={() => setSel(null)} onEnhance={() => doEnhance(items.find((i) => i.id === sel.id))} onAwaken={() => doAwaken(items.find((i) => i.id === sel.id))} cur={cur} />}
+      {sel && <Inspect it={sel} equipped={isEquipped(sel)} onToggleEquip={() => toggleEquip(sel)} onClose={() => setSel(null)} onEnhance={() => doEnhance(items.find((i) => i.id === sel.id))} onAwaken={() => doAwaken(items.find((i) => i.id === sel.id))} cur={cur} />}
 
       {toast && <div style={{ ...px, position: "fixed", left: "50%", bottom: 24, transform: "translateX(-50%)", background: "#fff", color: toast.color, padding: "10px 18px", borderRadius: 16, boxShadow: "0 8px 20px rgba(0,0,0,.18)", fontSize: 13, zIndex: 50 }}>{toast.txt}</div>}
     </div>
@@ -353,17 +373,18 @@ function Bar({ frac, color }) {
     </div>
   );
 }
-function Tile({ it, onClick }) {
+function Tile({ it, onClick, eq }) {
   return (
-    <button onClick={onClick} className="rounded-2xl flex flex-col items-center justify-center relative" style={{ aspectRatio: "1", background: C.panel, boxShadow: "0 3px 10px rgba(60,50,90,.08)", border: `2px solid ${QCOLOR[it.q]}33` }}>
+    <button onClick={onClick} className="rounded-2xl flex flex-col items-center justify-center relative" style={{ aspectRatio: "1", background: C.panel, boxShadow: "0 3px 10px rgba(60,50,90,.08)", border: `2px solid ${eq ? C.jade : QCOLOR[it.q] + "33"}` }}>
       <span style={{ fontSize: 28 }}>{it.icon}</span>
       <span style={{ ...px, position: "absolute", right: 6, bottom: 4, fontSize: 11, color: it.q >= 3 ? C.magenta : C.ink }}>{plusLabel(it)}</span>
       <span style={{ position: "absolute", left: 6, top: 6, width: 8, height: 8, borderRadius: 8, background: QCOLOR[it.q] }} />
+      {eq && <span style={{ position: "absolute", right: 5, top: 5, width: 9, height: 9, borderRadius: 9, background: C.jade, border: "1.5px solid #fff" }} />}
     </button>
   );
 }
 
-function Inspect({ it, onClose, onEnhance, onAwaken }) {
+function Inspect({ it, onClose, onEnhance, onAwaken, equipped, onToggleEquip }) {
   const cap = guaranteedCap(it.slot, it.q);
   const target = it.plus + 1;
   const guaranteed = target <= cap;
@@ -394,7 +415,10 @@ function Inspect({ it, onClose, onEnhance, onAwaken }) {
               </div>
             ))}
           </div>
-          <div className="flex gap-2 mt-4">
+          <button onClick={onToggleEquip} className="w-full py-2 mt-3 rounded-2xl" style={{ ...px, fontSize: 13, color: equipped ? C.jade : "#fff", background: equipped ? "#eafaf0" : C.ink, border: equipped ? `2px solid ${C.jade}` : "none" }}>
+            {equipped ? `✓ Equipped (${it.slot}) — tap to unequip` : `Equip to ${it.slot} slot`}
+          </button>
+          <div className="flex gap-2 mt-3">
             <button onClick={onEnhance} className="flex-1 py-3 rounded-2xl" style={{ ...px, fontSize: 13, color: "#fff", background: guaranteed ? `linear-gradient(90deg,${C.jade},#1faa46)` : `linear-gradient(90deg,${C.gold},#ff8c1a)` }}>
               {it.plus >= 9 ? "Maxed" : guaranteed ? `Enhance → +${target}` : `Try +${target} (${(successBps(over) / 100).toFixed(0)}%)`}
               <div style={{ fontSize: 10, opacity: .85 }}>{enhanceCost(target)} Jade</div>
