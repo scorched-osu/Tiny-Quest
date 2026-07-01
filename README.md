@@ -137,6 +137,23 @@ Skills tree · Arena/PvP · Guilds/Social · Crafting · Gem sockets · Gacha "T
 chests · Titles · daily/seasonal events · pets as combat companions · Diamonds
 (premium) purchase flow.
 
+## Playable demo (frontend, no chain required)
+`cd frontend && npm i && npm run dev` → the root route is a fully playable
+vertical slice of the game loop:
+- **Hero**: pick a class (6 classes with distinct starting stats), level up,
+  allocate STR/AGI/INT/VIT points.
+- **Gear**: equip/unequip a loadout (only equipped gear feeds combat stats),
+  enhance (+N, guaranteed vs. chance by slot/quality), awaken (★ stars).
+- **Auto-battler**: idle combat over scaling stages with bosses every 5th;
+  hero auto-attacks from derived stats; **active skills** (Fireball/Mend/
+  Meteor) auto-cast on cooldown. Kills drop Soul/Exp/Jade; Claim banks them
+  into level-ups.
+- **Marketplace**: buy NPC gear with Jade, list your own with a live
+  seller/royalty/fee/burn split.
+
+The `/onchain` route shows the same UI wired to the Anchor programs via wallet.
+
 ## What's done
-✅ 5 programs · ✅ deploy/init · ✅ authoritative backend · ✅ playable UI slice ·
+✅ 9 programs (5 host-verified) · ✅ deploy/init · ✅ authoritative backend ·
+✅ playable frontend (combat + skills + equip + marketplace) ·
 ✅ on-chain client + wallet wiring · ✅ data-model spec
