@@ -275,10 +275,11 @@ export default function Game() {
   const num = (n) => n.toLocaleString();
 
   return (
-    <div style={{ ...round, background: `linear-gradient(160deg, ${C.frost}, ${C.bg})`, color: C.ink, minHeight: "100%" }} className="w-full">
+    <div style={{ ...round, minHeight: "100vh", background: `radial-gradient(130% 60% at 50% 0%, #2a2140, #0b0f14)`, display: "flex", justifyContent: "center", alignItems: "flex-start" }} className="w-full">
       <style>{`@import url('https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@400;500;600;700&family=Nunito:wght@600;700;800;900&display=swap');`}</style>
 
-      <div className="mx-auto" style={{ maxWidth: 460, paddingBottom: 90 }}>
+      {/* centered device frame — full-bleed on mobile, framed on desktop */}
+      <div style={{ width: "100%", maxWidth: 460, minHeight: "100vh", paddingBottom: 90, color: C.ink, background: `linear-gradient(160deg, ${C.frost}, ${C.bg})`, boxShadow: "0 0 60px #0007", position: "relative" }}>
         {/* top bar */}
         <div className="flex items-center justify-between px-3 py-3">
           <Wallet icon={<Gem size={16} color={C.gem} />} v={num(cur.diamonds)} />
