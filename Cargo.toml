@@ -1,0 +1,8 @@
+[workspace]
+members = ["programs/*"]
+resolver = "2"
+
+[profile.release]
+overflow-checks = true   # keep checked math in release; we rely on checked_* too
+lto = "fat"
+codegen-units = 1

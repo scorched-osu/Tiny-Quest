@@ -1,0 +1,30 @@
+[toolchain]
+anchor_version = "0.31.0"
+
+[features]
+resolution = true
+skip-lint = false
+
+[programs.devnet]
+game_core = "CoRe1111111111111111111111111111111111111111"
+game_resources = "ReSo1111111111111111111111111111111111111111"
+game_assets = "AsSeT1111111111111111111111111111111111111111"
+game_progression = "PrGr1111111111111111111111111111111111111111"
+game_marketplace = "MrKt1111111111111111111111111111111111111111"
+game_skills = "SkiL1111111111111111111111111111111111111111"
+game_arena = "AreN1111111111111111111111111111111111111111"
+game_guilds = "GuiL1111111111111111111111111111111111111111"
+game_titles = "TitL1111111111111111111111111111111111111111"
+
+[registry]
+url = "https://api.apr.dev"
+
+[provider]
+cluster = "devnet"
+wallet = "~/.config/solana/id.json"
+
+[scripts]
+init = "ts-node scripts/initialize.ts"
+
+# After `anchor build`, run `anchor keys list` and replace EVERY id above AND each
+# program's declare_id!() with the real generated keys, then `anchor build` again.

@@ -1,0 +1,24 @@
+[package]
+name = "game_progression"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+crate-type = ["cdylib", "lib"]
+name = "game_progression"
+
+[features]
+default = []
+cpi = ["no-entrypoint"]
+no-entrypoint = []
+no-idl = []
+no-log-ix-name = []
+idl-build = ["anchor-lang/idl-build", "anchor-spl/idl-build"]
+
+[dependencies]
+anchor-lang = { version = "0.31.0", features = ["init-if-needed"] }
+anchor-spl = "0.31.0"
+mpl-core = "0.8.0"
+game_core = { path = "../core", features = ["cpi"] }
+game_assets = { path = "../assets", features = ["cpi"] }
+game_resources = { path = "../resources", features = ["cpi"] }

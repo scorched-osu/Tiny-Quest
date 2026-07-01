@@ -1,0 +1,26 @@
+{
+  "name": "soulforge-backend",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Authoritative reward + commit-reveal roller service",
+  "license": "MIT",
+  "scripts": {
+    "dev": "ts-node server.ts",
+    "start": "node dist/server.js",
+    "build": "tsc"
+  },
+  "dependencies": {
+    "@coral-xyz/anchor": "^0.31.0",
+    "@solana/spl-token": "^0.4.9",
+    "@solana/web3.js": "^1.95.4",
+    "cross-fetch": "^4.0.0",
+    "express": "^4.21.0",
+    "js-sha3": "^0.9.3"
+  },
+  "devDependencies": {
+    "@types/express": "^4.17.21",
+    "@types/node": "^22.7.5",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.6.3"
+  }
+}

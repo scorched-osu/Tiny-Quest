@@ -1,0 +1,22 @@
+{
+  "name": "soulforge",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Soulforge — DeFi NFT idle-ARPG on Solana (Anchor workspace root)",
+  "license": "MIT",
+  "scripts": {
+    "lint": "prettier --check 'scripts/**/*.ts'",
+    "init": "ts-node scripts/initialize.ts"
+  },
+  "dependencies": {
+    "@coral-xyz/anchor": "^0.31.0",
+    "@solana/spl-token": "^0.4.9",
+    "@solana/web3.js": "^1.95.4"
+  },
+  "devDependencies": {
+    "@types/node": "^22.7.5",
+    "prettier": "^3.3.3",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.6.3"
+  }
+}
