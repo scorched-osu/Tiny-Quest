@@ -46,6 +46,24 @@ const SEED_ITEMS = [
   { id: 11, name: "Sprite Pet", slot: "pet", q: 3, plus: 0, stars: 2, lvl: 40, icon: "🧚", base: { max_attack: 25, crit_bps: 120 } },
 ];
 
+// NPC market listings — buyable with Jade (mirrors marketplace.buy)
+const MARKET_SEED = [
+  { id: 101, name: "Storm Blade", slot: "weapon", q: 4, plus: 3, stars: 1, lvl: 55, icon: "⚔️", base: { atk_min: 90, atk_max: 240, agility: 10, crit_bps: 200 }, price: 8500 },
+  { id: 102, name: "Aegis Plate", slot: "chest", q: 3, plus: 4, stars: 2, lvl: 54, icon: "🛡️", base: { defence: 28, hp: 120, vitality: 10 }, price: 6200 },
+  { id: 103, name: "Phoenix Ring", slot: "ring", q: 5, plus: 2, stars: 4, lvl: 56, icon: "💍", base: { crit_bps: 400, crit_dmg_bps: 600, intelligence: 8 }, price: 12800 },
+  { id: 104, name: "Swift Boots", slot: "legs", q: 3, plus: 5, stars: 1, lvl: 50, icon: "🥾", base: { defence: 18, agility: 14, hp: 70 }, price: 4300 },
+];
+// marketplace 4-way split (mirrors marketplace program config)
+const FEE_BPS = 500, ROYALTY_BPS = 500, BURN_SHARE = 0.30;
+const splitOf = (price) => {
+  const fee = Math.round((price * FEE_BPS) / 10000);
+  const royalty = Math.round((price * ROYALTY_BPS) / 10000);
+  const burn = Math.round(fee * BURN_SHARE);
+  const treasury = fee - burn;
+  const seller = price - fee - royalty;
+  return { fee, royalty, burn, treasury, seller };
+};
+
 // ── rules (mirror progression program) ──
 const ARMOR = ["helm", "chest", "legs", "gloves", "belt"];
 const ACCESSORY = ["ring", "amulet", "cloak", "pet"];
@@ -96,7 +114,11 @@ export default function Game() {
   const [acc, setAcc] = useState({ exp: 0, soul: 0, jade: 0 });
   const [toast, setToast] = useState(null);
   const [showClass, setShowClass] = useState(false);
+  const [market, setMarket] = useState(MARKET_SEED); // NPC gear for sale
+  const [listings, setListings] = useState([]);      // player's active listings [{item, price}]
+  const [listing, setListing] = useState(null);      // item being priced in the list modal
   const [pop, setPop] = useState(null); // floating combat text
+  const idRef = useRef(1000);
   const [combat, setCombat] = useState({ stage: 1, heroHp: null, enemy: enemyForStage(1), kills: 0, downed: false });
   const tRef = useRef();
   const derivedRef = useRef(null);
@@ -201,6 +223,27 @@ export default function Game() {
   function allocate(stat) {
     if (hero.unspent <= 0) return;
     setHero((h) => ({ ...h, unspent: h.unspent - 1, [stat]: h[stat] + 1 }));
+  }
+  function buy(m) { // maps to marketplace.buy (Jade -> seller/treasury/burn, royalty to creator)
+    if (cur.jade < m.price) return flash("Not enough Jade", C.danger);
+    setCur((c) => ({ ...c, jade: c.jade - m.price }));
+    const { price, ...gear } = m;
+    const nid = ++idRef.current;
+    setItems((xs) => [...xs, { ...gear, id: nid }]);
+    setMarket((ms) => ms.filter((x) => x.id !== m.id));
+    flash(`Bought ${m.name}`, C.jade);
+  }
+  function confirmList(item, price) { // maps to marketplace.list (escrow)
+    if (equipped[item.slot] === item.id) setEquipped((e) => { const n = { ...e }; delete n[item.slot]; return n; });
+    setItems((xs) => xs.filter((i) => i.id !== item.id));
+    setListings((ls) => [...ls, { item, price }]);
+    setListing(null);
+    flash(`Listed ${item.name} for ${num(price)} Jade`, C.jade);
+  }
+  function delist(entry) { // maps to marketplace.cancel (escrow -> owner)
+    setListings((ls) => ls.filter((l) => l !== entry));
+    setItems((xs) => [...xs, entry.item]);
+    flash(`Delisted ${entry.item.name}`, C.sub);
   }
   function mintHero(cls) {
     // maps to assets.mint_hero (FREE) with the chosen class -> class starting stats
@@ -311,15 +354,47 @@ export default function Game() {
             </div>
           )}
           {tab === "market" && (
-            <div className="space-y-2">
-              {items.slice(0, 4).map((it) => (
-                <div key={it.id} className="flex items-center gap-3 p-2 rounded-2xl" style={{ background: C.panel }}>
-                  <div className="rounded-xl flex items-center justify-center" style={{ width: 44, height: 44, background: C.frost, fontSize: 22 }}>{it.icon}</div>
-                  <div className="flex-1"><div style={{ ...px, fontSize: 13, color: QCOLOR[it.q] }}>{it.name} {plusLabel(it)}</div><div style={{ fontSize: 11, color: C.sub }}>{QUALITY[it.q]} · Lv.{it.lvl}</div></div>
-                  <button onClick={() => flash("Listed for 1,200 Jade", C.jade)} className="px-3 py-2 rounded-xl" style={{ ...px, fontSize: 12, color: "#fff", background: C.ink }}>List</button>
+            <div className="space-y-3">
+              {/* Buy */}
+              <div>
+                <div style={{ ...px, fontSize: 12, color: C.ink, margin: "0 2px 6px" }}>Buy gear · pay in Jade</div>
+                <div className="space-y-2">
+                  {market.length === 0 && <div style={{ fontSize: 11, color: C.sub, textAlign: "center", padding: 8 }}>Sold out — restocks after more battles</div>}
+                  {market.map((m) => (
+                    <Row key={m.id} it={m}>
+                      <button onClick={() => buy(m)} className="px-3 py-2 rounded-xl text-center" style={{ ...px, fontSize: 12, color: "#fff", background: cur.jade >= m.price ? C.jade : "#c3c0d0" }}>
+                        Buy<div style={{ fontSize: 10, opacity: .9 }}>{num(m.price)}</div>
+                      </button>
+                    </Row>
+                  ))}
                 </div>
-              ))}
-              <div style={{ fontSize: 11, color: C.sub, textAlign: "center", paddingTop: 4 }}>Sales pay seller + 5% royalty + 5% fee (30% of fee burned)</div>
+              </div>
+              {/* Your listings */}
+              {listings.length > 0 && (
+                <div>
+                  <div style={{ ...px, fontSize: 12, color: C.ink, margin: "0 2px 6px" }}>Your listings</div>
+                  <div className="space-y-2">
+                    {listings.map((l, i) => (
+                      <Row key={i} it={l.item} sub={`Listed · ${num(l.price)} Jade · you get ${num(splitOf(l.price).seller)}`}>
+                        <button onClick={() => delist(l)} className="px-3 py-2 rounded-xl" style={{ ...px, fontSize: 12, color: C.ink, background: C.frost }}>Delist</button>
+                      </Row>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {/* Sell */}
+              <div>
+                <div style={{ ...px, fontSize: 12, color: C.ink, margin: "0 2px 6px" }}>Sell your gear</div>
+                <div className="space-y-2">
+                  {items.length === 0 && <div style={{ fontSize: 11, color: C.sub, textAlign: "center", padding: 8 }}>Nothing to sell</div>}
+                  {items.map((it) => (
+                    <Row key={it.id} it={it}>
+                      <button onClick={() => setListing(it)} className="px-3 py-2 rounded-xl" style={{ ...px, fontSize: 12, color: "#fff", background: C.ink }}>List</button>
+                    </Row>
+                  ))}
+                </div>
+              </div>
+              <div style={{ fontSize: 11, color: C.sub, textAlign: "center" }}>Split on every sale: seller 90% · 5% creator royalty · 5% fee (30% burned)</div>
             </div>
           )}
         </div>
@@ -347,6 +422,8 @@ export default function Game() {
 
       {sel && <Inspect it={sel} equipped={isEquipped(sel)} onToggleEquip={() => toggleEquip(sel)} onClose={() => setSel(null)} onEnhance={() => doEnhance(items.find((i) => i.id === sel.id))} onAwaken={() => doAwaken(items.find((i) => i.id === sel.id))} cur={cur} />}
 
+      {listing && <ListModal item={listing} onClose={() => setListing(null)} onConfirm={confirmList} />}
+
       {toast && <div style={{ ...px, position: "fixed", left: "50%", bottom: 24, transform: "translateX(-50%)", background: "#fff", color: toast.color, padding: "10px 18px", borderRadius: 16, boxShadow: "0 8px 20px rgba(0,0,0,.18)", fontSize: 13, zIndex: 50 }}>{toast.txt}</div>}
     </div>
   );
@@ -370,6 +447,52 @@ function Bar({ frac, color }) {
   return (
     <div className="rounded-full mt-1" style={{ height: 7, width: "100%", background: "#0000001f", overflow: "hidden" }}>
       <div style={{ height: 7, width: `${Math.max(0, Math.min(1, frac)) * 100}%`, background: color, borderRadius: 9999, transition: "width .25s linear" }} />
+    </div>
+  );
+}
+function Row({ it, sub, children }) {
+  return (
+    <div className="flex items-center gap-3 p-2 rounded-2xl" style={{ background: C.panel }}>
+      <div className="rounded-xl flex items-center justify-center" style={{ width: 44, height: 44, background: C.frost, fontSize: 22 }}>{it.icon}</div>
+      <div className="flex-1 min-w-0">
+        <div style={{ ...px, fontSize: 13, color: QCOLOR[it.q] }}>{it.name} {plusLabel(it)}</div>
+        <div style={{ fontSize: 11, color: C.sub, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{sub ?? `${QUALITY[it.q]} · Lv.${it.lvl}`}</div>
+      </div>
+      {children}
+    </div>
+  );
+}
+function ListModal({ item, onClose, onConfirm }) {
+  const [price, setPrice] = useState(1200);
+  const s = splitOf(price);
+  const step = (d) => setPrice((p) => Math.max(100, p + d));
+  const SplitRow = ({ label, v, c, strong }) => (
+    <div className="flex items-center justify-between" style={{ padding: "3px 0" }}>
+      <span style={{ fontSize: 12, color: C.sub }}>{label}</span>
+      <span style={{ ...px, fontSize: strong ? 15 : 13, color: c }}>{v.toLocaleString()}</span>
+    </div>
+  );
+  const Step = ({ d, children }) => (
+    <button onClick={() => step(d)} className="rounded-xl" style={{ ...px, fontSize: 12, padding: "6px 8px", background: C.frost, color: C.ink }}>{children}</button>
+  );
+  return (
+    <div onClick={onClose} style={{ position: "fixed", inset: 0, background: "#1d153066", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 46, padding: 16 }}>
+      <div onClick={(e) => e.stopPropagation()} className="rounded-3xl p-4" style={{ background: "#fff", width: "100%", maxWidth: 380 }}>
+        <div style={{ ...px, fontSize: 16, textAlign: "center" }}>List {item.name}</div>
+        <div style={{ fontSize: 11, color: C.sub, textAlign: "center", marginBottom: 12 }}>Set your asking price (Jade)</div>
+        <div className="flex items-center justify-center gap-2 mb-3">
+          <Step d={-500}>−500</Step><Step d={-100}>−100</Step>
+          <div style={{ ...px, fontSize: 20, color: C.jade, minWidth: 92, textAlign: "center" }}>{price.toLocaleString()}</div>
+          <Step d={100}>+100</Step><Step d={500}>+500</Step>
+        </div>
+        <div className="rounded-2xl p-3" style={{ background: "#f4f2fb" }}>
+          <SplitRow label="You receive" v={s.seller} c={C.jade} strong />
+          <SplitRow label="Creator royalty (5%)" v={s.royalty} c={C.gem} />
+          <SplitRow label="Treasury fee" v={s.treasury} c={C.ink} />
+          <SplitRow label="Burned 🔥 (deflationary)" v={s.burn} c={C.danger} />
+        </div>
+        <button onClick={() => onConfirm(item, price)} className="w-full py-3 mt-3 rounded-2xl" style={{ ...px, fontSize: 14, color: "#fff", background: `linear-gradient(90deg,${C.jade},#1faa46)` }}>Confirm listing</button>
+      </div>
     </div>
   );
 }
