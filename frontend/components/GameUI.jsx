@@ -61,6 +61,21 @@ const isPct = (k) => k.endsWith("_bps");
 const bonusOf = (b, plus, stars) => Math.round(b * (0.15 * plus + 0.1 * (stars - 1)));
 const fmtVal = (k, v) => (isPct(k) ? `${(v / 100).toFixed(0)}%` : `${v}`);
 
+// ── auto-battler (mirrors the idle combat loop; drops feed grant_xp / mint_resource) ──
+const MONSTERS = [
+  { name: "Cave Bat", icon: "🦇" }, { name: "Goblin", icon: "👺" },
+  { name: "Slime King", icon: "🟢" }, { name: "Skeleton", icon: "💀" },
+  { name: "Dark Mage", icon: "🧟" }, { name: "Frost Wyrm", icon: "🐉" },
+  { name: "Demon Lord", icon: "👹" },
+];
+const enemyForStage = (stage) => {
+  const m = MONSTERS[(stage - 1) % MONSTERS.length];
+  const boss = stage % 5 === 0;
+  const hpMax = Math.round(320 * Math.pow(1.16, stage - 1)) * (boss ? 3 : 1);
+  const atk = Math.round(16 * Math.pow(1.11, stage - 1)) * (boss ? 2 : 1);
+  return { name: boss ? `${m.name} ★` : m.name, icon: m.icon, hp: hpMax, hpMax, atk, boss };
+};
+
 export default function Game() {
   const [cur, setCur] = useState({ diamonds: 0, jade: 2_094_819, soul: 17_865_124 });
   const [hero, setHero] = useState({ class: 1, level: 55, exp: 0, soulPower: 59, strength: 60, agility: 24, intelligence: 88, vitality: 41, unspent: 6 });
@@ -71,16 +86,9 @@ export default function Game() {
   const [toast, setToast] = useState(null);
   const [showClass, setShowClass] = useState(false);
   const [pop, setPop] = useState(null); // floating combat text
+  const [combat, setCombat] = useState({ stage: 1, heroHp: null, enemy: enemyForStage(1), kills: 0, downed: false });
   const tRef = useRef();
-
-  // idle accrual (mirrors server-side time-based drops)
-  useEffect(() => {
-    const id = setInterval(() => {
-      setAcc((a) => ({ exp: a.exp + 12, soul: a.soul + 4, jade: a.jade + 1 }));
-      setPop({ id: Math.random(), txt: ["Fireball Shot!", "Critical!", "Soul +4", "Combo x3"][Math.floor(Math.random() * 4)] });
-    }, 1100);
-    return () => clearInterval(id);
-  }, []);
+  const derivedRef = useRef(null);
 
   const flash = (txt, color = C.ink) => { setToast({ txt, color }); clearTimeout(tRef.current); tRef.current = setTimeout(() => setToast(null), 1800); };
 
@@ -96,6 +104,45 @@ export default function Game() {
     }
     return { aMin, aMax, def, crit, hp, mp };
   })();
+  derivedRef.current = derived; // latest combat stats for the battle loop
+
+  // auto-battler: runs idle. Hero auto-attacks with derived stats; kills drop
+  // Soul + Exp into `acc`, which Claim banks into grant_xp/level-ups.
+  useEffect(() => {
+    const id = setInterval(() => {
+      const d = derivedRef.current;
+      if (!d) return;
+      setCombat((cb) => {
+        let { stage, heroHp, enemy, kills } = cb;
+        const heroMax = d.hp;
+        if (heroHp == null) heroHp = heroMax;
+        if (!enemy) enemy = enemyForStage(stage);
+        // hero strikes
+        const crit = Math.random() * 10000 < d.crit;
+        let dmg = Math.round(d.aMin + Math.random() * Math.max(1, d.aMax - d.aMin));
+        if (crit) dmg = Math.round(dmg * 1.8);
+        setPop({ id: Math.random(), txt: crit ? `CRIT ${dmg}` : `${dmg}`, crit });
+        const eHp = enemy.hp - dmg;
+        if (eHp <= 0) {
+          const soulDrop = Math.round(enemy.hpMax * 0.015) + stage;
+          const expDrop = Math.round(stage * 6 + enemy.hpMax * 0.02);
+          const jadeDrop = enemy.boss ? stage * 3 : Math.random() < 0.25 ? stage : 0;
+          setAcc((a) => ({ exp: a.exp + expDrop, soul: a.soul + soulDrop, jade: a.jade + jadeDrop }));
+          const next = stage + 1;
+          return { stage: next, heroHp: Math.min(heroMax, heroHp + Math.round(heroMax * 0.25)), enemy: enemyForStage(next), kills: kills + 1, downed: false };
+        }
+        // enemy strikes back, mitigated by defence
+        const eDmg = Math.max(1, Math.round(enemy.atk * (1 - d.def / (d.def + 240))));
+        const hHp = heroHp - eDmg;
+        if (hHp <= 0) {
+          const back = Math.max(1, stage - 1);
+          return { stage: back, heroHp: heroMax, enemy: enemyForStage(back), kills, downed: true };
+        }
+        return { ...cb, heroHp: hHp, enemy: { ...enemy, hp: eHp }, downed: false };
+      });
+    }, 650);
+    return () => clearInterval(id);
+  }, []);
 
   const update = (id, patch) => setItems((xs) => xs.map((it) => (it.id === id ? { ...it, ...patch } : it)));
 
@@ -211,10 +258,28 @@ export default function Game() {
           {tab === "battle" && (
             <div className="rounded-3xl p-4" style={{ background: `linear-gradient(165deg, #bfe0ff, #8ec5ff)`, position: "relative", overflow: "hidden", minHeight: 220 }}>
               <div style={{ position: "absolute", inset: 0, opacity: .15, background: "repeating-linear-gradient(135deg,#fff 0 8px,transparent 8px 16px)" }} />
-              <div className="flex items-center justify-center" style={{ height: 120, fontSize: 48, position: "relative" }}>
-                ⚔️{pop && <span key={pop.id} style={{ ...px, position: "absolute", top: 6, color: C.gold, fontSize: 14, textShadow: "0 1px 2px #0006", animation: "rise 1.1s ease-out" }}>{pop.txt}</span>}
+              <div className="flex items-center justify-between" style={{ position: "relative" }}>
+                <span style={{ ...px, fontSize: 12, color: combat.enemy?.boss ? C.danger : C.ink }}>Stage {combat.stage}{combat.enemy?.boss ? " · BOSS" : ""}</span>
+                <span style={{ ...px, fontSize: 12, color: C.ink }}>Kills {combat.kills}</span>
               </div>
-              <div className="rounded-2xl p-3" style={{ background: "#ffffffcc" }}>
+              {/* enemy */}
+              <div className="flex flex-col items-center" style={{ position: "relative", marginTop: 4 }}>
+                <div style={{ fontSize: 46, filter: "drop-shadow(0 3px 4px #0003)" }}>{combat.enemy?.icon}</div>
+                {pop && <span key={pop.id} style={{ ...px, position: "absolute", top: 0, color: pop.crit ? C.gold : "#fff", fontSize: pop.crit ? 17 : 13, fontWeight: 700, textShadow: "0 1px 3px #0007", animation: "rise .65s ease-out" }}>{pop.txt}</span>}
+                <div style={{ ...px, fontSize: 12, color: combat.enemy?.boss ? C.danger : C.ink, marginTop: 2 }}>{combat.enemy?.name}</div>
+                <div style={{ width: 190 }}><Bar frac={combat.enemy ? combat.enemy.hp / combat.enemy.hpMax : 1} color={C.danger} /></div>
+              </div>
+              {/* hero HP */}
+              <div className="rounded-2xl p-2 mt-3" style={{ background: "#ffffffcc", position: "relative" }}>
+                <div className="flex items-center justify-between" style={{ fontSize: 11, color: C.sub }}>
+                  <span>🧙‍♀️ Your HP</span>
+                  <span style={{ ...px }}>{Math.max(0, Math.round(combat.heroHp ?? derived.hp)).toLocaleString()} / {derived.hp.toLocaleString()}</span>
+                </div>
+                <Bar frac={(combat.heroHp ?? derived.hp) / derived.hp} color={C.jade} />
+                {combat.downed && <div style={{ ...px, fontSize: 11, color: C.danger, textAlign: "center", marginTop: 4 }}>Defeated — retreated to stage {combat.stage}. Enhance your gear!</div>}
+              </div>
+              {/* drops + claim */}
+              <div className="rounded-2xl p-3 mt-2" style={{ background: "#ffffffcc" }}>
                 <div className="grid grid-cols-3 gap-2 text-center">
                   <Drop icon="✨" label="Exp" v={acc.exp} c={C.gold} />
                   <Drop icon="💧" label="Soul" v={acc.soul} c={C.soul} />
@@ -222,7 +287,7 @@ export default function Game() {
                 </div>
                 <button onClick={claim} className="w-full mt-3 py-3 rounded-2xl" style={{ ...px, fontSize: 15, color: "#fff", background: `linear-gradient(90deg, ${C.jade}, #1faa46)`, boxShadow: "0 6px 14px #1faa4655" }}>Claim Rewards</button>
               </div>
-              <style>{`@keyframes rise{from{transform:translateY(10px);opacity:0}30%{opacity:1}to{transform:translateY(-24px);opacity:0}}`}</style>
+              <style>{`@keyframes rise{from{transform:translateY(8px);opacity:0}30%{opacity:1}to{transform:translateY(-26px);opacity:0}}`}</style>
             </div>
           )}
           {tab === "market" && (
@@ -280,6 +345,13 @@ function Stat({ icon, label, v, highlight }) {
 }
 function Drop({ icon, label, v, c }) {
   return <div><div style={{ fontSize: 18 }}>{icon}</div><div style={{ fontSize: 10, color: "#8a85a3" }}>{label}</div><div style={{ ...px, fontSize: 14, color: c }}>{v.toLocaleString()}</div></div>;
+}
+function Bar({ frac, color }) {
+  return (
+    <div className="rounded-full mt-1" style={{ height: 7, width: "100%", background: "#0000001f", overflow: "hidden" }}>
+      <div style={{ height: 7, width: `${Math.max(0, Math.min(1, frac)) * 100}%`, background: color, borderRadius: 9999, transition: "width .25s linear" }} />
+    </div>
+  );
 }
 function Tile({ it, onClick }) {
   return (
